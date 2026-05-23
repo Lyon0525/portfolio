@@ -62,13 +62,13 @@ const PORTFOLIO_DATA: PortfolioData = {
     "Creative Coder"
   ],
   tagline: "I craft pixel-perfect, performant digital experiences that live at the intersection of design and engineering.",
-  email: "kristof.palfi@example.com",
+  email: "palfikristof2004.kfpl@gmail.com",
   location: "Budapest, Hungary",
   availability: "Open to opportunities",
   social: {
-    github: "https://github.com",
+    github: "https://github.com/Lyon0525",
     linkedin: "https://linkedin.com",
-    email: "mailto:kristof.palfi@example.com",
+    email: "mailto:palfikristof2004.kfpl@gmail.com",
   },
   cvUrl: "#",
   about: {
@@ -85,11 +85,11 @@ const PORTFOLIO_DATA: PortfolioData = {
       { name: "Three.js", level: 65 },
     ],
     Backend: [
+      { name: "C#", level: 95 },
       { name: "Node.js", level: 82 },
       { name: "PostgreSQL", level: 75 },
       { name: "GraphQL", level: 78 },
       { name: "Prisma", level: 72 },
-      { name: "Redis", level: 60 },
     ],
     Tools: [
       { name: "Git & GitHub", level: 95 },
@@ -332,7 +332,7 @@ function Navbar() {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   HERO
+   HERO (STABIL SZÖVEGŰ, KERINGŐ REAKCIÓS BUBORÉKOK)
 ───────────────────────────────────────────────────────────── */
 function Hero() {
   const { scrollY } = useScroll();
@@ -405,38 +405,77 @@ function Hero() {
             </motion.div>
           </div>
 
+          {/* Vizuális atommag keringés stabilizált buborékokkal */}
           <motion.div
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="relative flex items-center justify-center"
+            className="relative flex items-center justify-center h-[380px] sm:h-[420px]"
           >
-            <div className="relative w-72 h-72 sm:w-80 sm:h-80 lg:w-[380px] lg:h-[380px]">
+            <div className="relative w-72 h-72 sm:w-80 sm:h-80 lg:w-[380px] lg:h-[380px] flex items-center justify-center">
+              
+              {/* 1. KÜLSŐ KÖR (React) – Előre forog, a buborék hátrafelé */}
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                 className="absolute inset-0 rounded-full border border-cyan-500/20"
               >
                 <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_10px_#22d3ee]" />
+                
+                {/* Ellenforgás: Ha a kör +360-at megy, a buborék -360-at fordul vissza */}
+                <motion.div 
+                  animate={{ rotate: -360 }}
+                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                  style={{ top: "0%", left: "50%", transform: "translate(15px, -50%)" }}
+                  className="absolute flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-mono font-bold backdrop-blur-sm shadow-lg border-cyan-500/40 text-cyan-400 bg-cyan-500/10 whitespace-nowrap origin-center"
+                >
+                  <Code2 size={10} />
+                  React
+                </motion.div>
               </motion.div>
 
+              {/* 2. KÖZÉPSŐ KÖR (TypeScript) – Hátrafelé forog, a buborék előrefelé */}
               <motion.div
                 animate={{ rotate: -360 }}
                 transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
                 className="absolute inset-8 rounded-full border border-violet-500/25"
               >
                 <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-violet-400 shadow-[0_0_10px_#a78bfa]" />
+                
+                {/* Ellenforgás: Ha a kör -360-at megy, a buborék +360-at fordul vissza */}
+                <motion.div 
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
+                  style={{ top: "50%", right: "0%", transform: "translate(calc(100% + 8px), -50%)" }}
+                  className="absolute flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-mono font-bold backdrop-blur-sm shadow-lg border-violet-500/40 text-violet-400 bg-violet-500/10 whitespace-nowrap origin-center"
+                >
+                  <Layers size={10} />
+                  TS
+                </motion.div>
               </motion.div>
 
+              {/* 3. BELSŐ KÖR (C#) – Előre forog, a buborék hátrafelé */}
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 9, repeat: Infinity, ease: "linear" }}
                 className="absolute inset-16 rounded-full border border-fuchsia-500/30"
               >
                 <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-fuchsia-400 shadow-[0_0_8px_#e879f9]" />
+                
+                {/* Ellenforgás: Ha a kör +360-at megy, a buborék -360-at fordul vissza */}
+                <motion.div 
+                  animate={{ rotate: -360 }}
+                  transition={{ duration: 9, repeat: Infinity, ease: "linear" }}
+                  style={{ bottom: "0%", left: "50%", transform: "translate(12px, 50%)" }}
+                  className="absolute flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-mono font-bold backdrop-blur-sm shadow-lg border-fuchsia-500/40 text-fuchsia-400 bg-fuchsia-500/10 whitespace-nowrap origin-center"
+                >
+                  <Cpu size={10} />
+                  C#
+                </motion.div>
               </motion.div>
 
-              <div className="absolute inset-20 rounded-full bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 flex items-center justify-center shadow-[inset_0_0_40px_rgba(0,0,0,0.5)]">
+              {/* Monogram Középen */}
+              <div className="absolute w-40 h-40 sm:w-44 sm:h-44 rounded-full bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 flex items-center justify-center shadow-[inset_0_0_40px_rgba(0,0,0,0.5)] z-10">
                 <motion.div
                   animate={{ scale: [1, 1.05, 1] }}
                   transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
@@ -446,34 +485,6 @@ function Hero() {
                 </motion.div>
               </div>
 
-              {[
-                { label: "React", angle: 0, color: "cyan" as const, Icon: Code2 },
-                { label: "TS", angle: 120, color: "violet" as const, Icon: Layers },
-                { label: "Node", angle: 240, color: "fuchsia" as const, Icon: Terminal },
-              ].map(({ label, angle, color, Icon }) => {
-                const rad = ((angle - 90) * Math.PI) / 180;
-                const r = 140;
-                const x = Math.cos(rad) * r;
-                const y = Math.sin(rad) * r;
-                const colorMap = {
-                  cyan: "border-cyan-500/40 text-cyan-400 bg-cyan-500/10",
-                  violet: "border-violet-500/40 text-violet-400 bg-violet-500/10",
-                  fuchsia: "border-fuchsia-500/40 text-fuchsia-400 bg-fuchsia-500/10",
-                };
-                return (
-                  <motion.div
-                    key={label}
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.8 + angle / 500, duration: 0.5 }}
-                    style={{ transform: `translate(${x}px, ${y}px)` }}
-                    className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-mono font-bold backdrop-blur-sm ${colorMap[color]}`}
-                  >
-                    <Icon size={12} />
-                    {label}
-                  </motion.div>
-                );
-              })}
             </div>
           </motion.div>
         </div>
