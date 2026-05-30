@@ -56,12 +56,12 @@ interface PortfolioData {
 const PORTFOLIO_DATA: PortfolioData = {
   name: "Kristóf Pálfi",
   titles: [
-    "Frontend Developer",
-    "React Specialist",
-    "UI/UX Enthusiast",
-    "Creative Coder"
+    "Full-Stack Web Developer",
+    "Application Developer",
+    "Big Data Scientist",
+    "Infrastructure Engineer"
   ],
-  tagline: "I craft pixel-perfect, performant digital experiences that live at the intersection of design and engineering.",
+  tagline: "I architect scalable applications, design robust data pipelines, and engineer reliable infrastructure from the ground up.",
   email: "palfikristof2004.kfpl@gmail.com",
   location: "Budapest, Hungary",
   availability: "Open to opportunities",
@@ -72,8 +72,8 @@ const PORTFOLIO_DATA: PortfolioData = {
   },
   cvUrl: "#",
   about: {
-    bio: "I'm a frontend developer with 5+ years of experience building fast, accessible, and delightful web applications. I obsess over clean architecture, semantic HTML, and the micro-interactions that make users smile. When I'm not pushing pixels, I'm contributing to open source or writing about web performance.",
-    highlights: ["5+ years experience", "20+ projects shipped", "Open source contributor"],
+    bio: "I am a versatile engineer operating at the convergence of software engineering, big data analytics, and cloud systems infrastructure. With deep expertise across the entire lifecycle of software development, I specialize in crafting elegant frontends, designing highly performant backends, implementing data science workflows, and provisioning automated cloud architectures.",
+    highlights: ["Full-Stack & Native Apps", "Big Data Pipelines", "DevOps & Cloud Infrastructure"],
   },
   skills: {
     Frontend: [
@@ -85,7 +85,7 @@ const PORTFOLIO_DATA: PortfolioData = {
       { name: "Three.js", level: 65 },
     ],
     Backend: [
-      { name: "C#", level: 95 },
+      { name: "C# / .NET", level: 95 },
       { name: "Node.js", level: 82 },
       { name: "PostgreSQL", level: 75 },
       { name: "GraphQL", level: 78 },
@@ -164,7 +164,6 @@ function useScrolled(threshold: number = 20): boolean {
   return scrolled;
 }
 
-// Typed Typewriter Hook
 function useTypewriter(words: string[], typingSpeed: number = 100, deletingSpeed: number = 50, pauseDuration: number = 2000): string {
   const [text, setText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
@@ -332,7 +331,7 @@ function Navbar() {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   HERO (STABIL SZÖVEGŰ, KERINGŐ REAKCIÓS BUBORÉKOK)
+   HERO (COUNTER-ROTATING COMPONENT BADGES)
 ───────────────────────────────────────────────────────────── */
 function Hero() {
   const { scrollY } = useScroll();
@@ -405,7 +404,6 @@ function Hero() {
             </motion.div>
           </div>
 
-          {/* Vizuális atommag keringés stabilizált buborékokkal */}
           <motion.div
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -414,15 +412,13 @@ function Hero() {
           >
             <div className="relative w-72 h-72 sm:w-80 sm:h-80 lg:w-[380px] lg:h-[380px] flex items-center justify-center">
               
-              {/* 1. KÜLSŐ KÖR (React) – Előre forog, a buborék hátrafelé */}
+              {/* Outer Orbit (React) */}
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                 className="absolute inset-0 rounded-full border border-cyan-500/20"
               >
                 <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_10px_#22d3ee]" />
-                
-                {/* Ellenforgás: Ha a kör +360-at megy, a buborék -360-at fordul vissza */}
                 <motion.div 
                   animate={{ rotate: -360 }}
                   transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
@@ -434,15 +430,13 @@ function Hero() {
                 </motion.div>
               </motion.div>
 
-              {/* 2. KÖZÉPSŐ KÖR (TypeScript) – Hátrafelé forog, a buborék előrefelé */}
+              {/* Middle Orbit (TypeScript) */}
               <motion.div
                 animate={{ rotate: -360 }}
                 transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
                 className="absolute inset-8 rounded-full border border-violet-500/25"
               >
                 <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-violet-400 shadow-[0_0_10px_#a78bfa]" />
-                
-                {/* Ellenforgás: Ha a kör -360-at megy, a buborék +360-at fordul vissza */}
                 <motion.div 
                   animate={{ rotate: 360 }}
                   transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
@@ -454,15 +448,13 @@ function Hero() {
                 </motion.div>
               </motion.div>
 
-              {/* 3. BELSŐ KÖR (C#) – Előre forog, a buborék hátrafelé */}
+              {/* Inner Orbit (C#) */}
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 9, repeat: Infinity, ease: "linear" }}
                 className="absolute inset-16 rounded-full border border-fuchsia-500/30"
               >
                 <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-fuchsia-400 shadow-[0_0_8px_#e879f9]" />
-                
-                {/* Ellenforgás: Ha a kör +360-at megy, a buborék -360-at fordul vissza */}
                 <motion.div 
                   animate={{ rotate: -360 }}
                   transition={{ duration: 9, repeat: Infinity, ease: "linear" }}
@@ -474,7 +466,7 @@ function Hero() {
                 </motion.div>
               </motion.div>
 
-              {/* Monogram Középen */}
+              {/* Central Monogram */}
               <div className="absolute w-40 h-40 sm:w-44 sm:h-44 rounded-full bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 flex items-center justify-center shadow-[inset_0_0_40px_rgba(0,0,0,0.5)] z-10">
                 <motion.div
                   animate={{ scale: [1, 1.05, 1] }}
