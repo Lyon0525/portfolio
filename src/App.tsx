@@ -10,6 +10,8 @@ import { FaGithub, FaLinkedin } from "react-icons/fa";
 /* ─────────────────────────────────────────────────────────────
    TYPES & INTERFACES
 ───────────────────────────────────────────────────────────── */
+type Lang = "en" | "hu";
+
 interface SocialLinks {
   github: string;
   linkedin: string;
@@ -36,45 +38,60 @@ interface Project {
   github: string;
 }
 
-interface PortfolioData {
-  name: string;
+interface ContentStructure {
   titles: string[];
   tagline: string;
+  availability: string;
+  about: AboutData;
+  projects: Project[];
+  nav: string[];
+  labels: {
+    about: string;
+    skills: string;
+    work: string;
+    contact: string;
+    aboutHeading: string;
+    aboutSubheading: string;
+    skillsHeading: string;
+    skillsSubheading: string;
+    projectsHeading: string;
+    projectsSubheading: string;
+    projectsViewAll: string;
+    contactHeading: string;
+    contactSubheading: string;
+    contactText: string;
+    viewWork: string;
+    downloadCv: string;
+    scroll: string;
+    experience: string;
+    shipped: string;
+    stars: string;
+    satisfaction: string;
+  };
+}
+
+interface PortfolioData {
+  name: string;
   email: string;
   location: string;
-  availability: string;
   social: SocialLinks;
   cvUrl: string;
-  about: AboutData;
   skills: Record<"Frontend" | "Backend" | "Tools", Skill[]>;
-  projects: Project[];
 }
 
 /* ─────────────────────────────────────────────────────────────
-   PORTFOLIO DATA
+   STATIC PORTFOLIO DATA (SHARED ACROSS LANGUAGES)
 ───────────────────────────────────────────────────────────── */
 const PORTFOLIO_DATA: PortfolioData = {
   name: "Kristóf Pálfi",
-  titles: [
-    "Full-Stack Web Developer",
-    "Application Developer",
-    "Big Data Scientist",
-    "Infrastructure Engineer"
-  ],
-  tagline: "I architect scalable applications, design robust data pipelines, and engineer reliable infrastructure from the ground up.",
   email: "palfikristof2004.kfpl@gmail.com",
   location: "Budapest, Hungary",
-  availability: "Open to opportunities",
   social: {
     github: "https://github.com/Lyon0525",
     linkedin: "https://linkedin.com",
     email: "mailto:palfikristof2004.kfpl@gmail.com",
   },
   cvUrl: "#",
-  about: {
-    bio: "I am a versatile engineer operating at the convergence of software engineering, big data analytics, and cloud systems infrastructure. With deep expertise across the entire lifecycle of software development, I specialize in crafting elegant frontends, designing highly performant backends, implementing data science workflows, and provisioning automated cloud architectures.",
-    highlights: ["Full-Stack & Native Apps", "Big Data Pipelines", "DevOps & Cloud Infrastructure"],
-  },
   skills: {
     Frontend: [
       { name: "React", level: 95 },
@@ -99,51 +116,105 @@ const PORTFOLIO_DATA: PortfolioData = {
       { name: "Vitest", level: 78 },
     ],
   },
-  projects: [
-    {
-      title: "Lumina UI",
-      description: "A production-ready component library built on Radix UI primitives with a focus on accessibility and developer experience. Ships with 40+ components and a Figma kit.",
-      tags: ["React", "TypeScript", "Storybook", "Radix UI"],
-      gradient: "from-violet-600/30 to-cyan-500/20",
-      accent: "#7c3aed",
-      demo: "#",
-      github: "#",
-    },
-    {
-      title: "Velocify Dashboard",
-      description: "Real-time analytics dashboard for SaaS metrics with live WebSocket updates, interactive charts, and role-based access control.",
-      tags: ["Next.js", "Recharts", "WebSocket", "Prisma"],
-      gradient: "from-cyan-600/30 to-emerald-500/20",
-      accent: "#06b6d4",
-      demo: "#",
-      github: "#",
-    },
-    {
-      title: "Forge CMS",
-      description: "A headless CMS with a visual block editor, multi-locale support, and a GraphQL API. Powers 12 production sites with zero downtime deploys.",
-      tags: ["Node.js", "GraphQL", "React", "PostgreSQL"],
-      gradient: "from-fuchsia-600/30 to-violet-500/20",
-      accent: "#d946ef",
-      demo: "#",
-      github: "#",
-    },
-    {
-      title: "PixelPerfect",
-      description: "A browser-based design tool for rapid UI prototyping with export to React components. Built with Canvas API and a custom layout engine.",
-      tags: ["Canvas API", "TypeScript", "IndexedDB", "Zustand"],
-      gradient: "from-amber-600/20 to-orange-500/20",
-      accent: "#f59e0b",
-      demo: "#",
-      github: "#",
-    },
-  ],
 };
 
 /* ─────────────────────────────────────────────────────────────
-   UTILITIES & MICRO-COMPONENTS
+   LANGUAGE DICTIONARY
 ───────────────────────────────────────────────────────────── */
-const NAV_LINKS = ["About", "Skills", "Projects", "Contact"];
+const DICTIONARY: Record<Lang, ContentStructure> = {
+  en: {
+    titles: [
+      "Full-Stack Web Developer",
+      "Application Developer",
+      "Big Data Scientist",
+      "Infrastructure Engineer"
+    ],
+    tagline: "I architect scalable applications, design robust data pipelines, and engineer reliable infrastructure from the ground up.",
+    availability: "Open to opportunities",
+    about: {
+      bio: "I am a versatile engineer operating at the convergence of software engineering, big data analytics, and cloud systems infrastructure. With deep expertise across the entire lifecycle of software development, I specialize in crafting elegant frontends, designing highly performant backends, implementing data science workflows, and provisioning automated cloud architectures.",
+      highlights: ["Full-Stack & Native Apps", "Big Data Pipelines", "DevOps & Cloud Infrastructure"],
+    },
+    nav: ["About", "Skills", "Projects", "Contact"],
+    labels: {
+      about: "About Me",
+      skills: "Tech Stack",
+      work: "Work",
+      contact: "Get In Touch",
+      aboutHeading: "Building things",
+      aboutSubheading: "that matter.",
+      skillsHeading: "My ",
+      skillsSubheading: "Toolkit",
+      projectsHeading: "Featured ",
+      projectsSubheading: "Projects",
+      projectsViewAll: "View all",
+      contactHeading: "Let's work ",
+      contactSubheading: "together",
+      contactText: "I'm currently available for freelance projects, full-time roles, and interesting collaborations. Let's build something great.",
+      viewWork: "View My Work",
+      downloadCv: "Download CV",
+      scroll: "Scroll",
+      experience: "Years of Experience",
+      shipped: "Projects Shipped",
+      stars: "GitHub Stars",
+      satisfaction: "Client Satisfaction"
+    },
+    projects: [
+      { title: "Lumina UI", description: "A production-ready component library built on Radix UI primitives with a focus on accessibility and developer experience.", tags: ["React", "TypeScript", "Storybook"], gradient: "from-violet-600/30 to-cyan-500/20", accent: "#7c3aed", demo: "#", github: "#" },
+      { title: "Velocify Dashboard", description: "Real-time analytics dashboard for SaaS metrics with live WebSocket updates, interactive charts, and role-based access control.", tags: ["Next.js", "Recharts", "WebSocket"], gradient: "from-cyan-600/30 to-emerald-500/20", accent: "#06b6d4", demo: "#", github: "#" },
+      { title: "Forge CMS", description: "A headless CMS with a visual block editor, multi-locale support, and a GraphQL API. Powers 12 production sites.", tags: ["Node.js", "GraphQL", "PostgreSQL"], gradient: "from-fuchsia-600/30 to-violet-500/20", accent: "#d946ef", demo: "#", github: "#" },
+      { title: "PixelPerfect", description: "A browser-based design tool for rapid UI prototyping with export to React components. Built with Canvas API.", tags: ["Canvas API", "TypeScript", "Zustand"], gradient: "from-amber-600/20 to-orange-500/20", accent: "#f59e0b", demo: "#", github: "#" },
+    ],
+  },
+  hu: {
+    titles: [
+      "Full-Stack Webfejlesztő",
+      "Alkalmazásfejlesztő",
+      "Big Data Adattudós",
+      "Infrastruktúra Mérnök"
+    ],
+    tagline: "Skálázható alkalmazásokat tervezek, robusztus adatfolyamokat építek és megbízható felhő-infrastruktúrát üzemeltetek az alapoktól.",
+    availability: "Nyitott a lehetőségekre",
+    about: {
+      bio: "Sokoldalú mérnök vagyok, aki a szoftverfejlesztés, a big data analitika és a felhőalapú rendszerek metszéspontjában dolgozik. A szoftverfejlesztés teljes életciklusában szerzett tapasztalataimmal elegáns frontendek készítésére, nagy teljesítményű backendek tervezésére, adattudományi munkafolyamatok megvalósítására és automatizált felhőarchitektúrák kiépítésére specializálódtam.",
+      highlights: ["Full-Stack és Natív Appok", "Big Data Adatfolyamok", "DevOps és Felhő Infrastruktúra"],
+    },
+    nav: ["Rólam", "Képességek", "Projektek", "Kapcsolat"],
+    labels: {
+      about: "Rólam",
+      skills: "Technológiák",
+      work: "Munkáim",
+      contact: "Kapcsolat",
+      aboutHeading: "Dolgokat építek,",
+      aboutSubheading: "amik számítanak.",
+      skillsHeading: "Az én ",
+      skillsSubheading: "Eszközkészletem",
+      projectsHeading: "Kiemelt ",
+      projectsSubheading: "Projektek",
+      projectsViewAll: "Összes megtekintése",
+      contactHeading: "Dolgozzunk ",
+      contactSubheading: "együtt",
+      contactText: "Jelenleg elérhető vagyok szabadúszó projektekre, teljes munkaidős pozíciókra és érdekes együttműködésekre. Építsünk valami nagyszerűt.",
+      viewWork: "Munkáim megtekintése",
+      downloadCv: "Önéletrajz letöltése",
+      scroll: "Görgess",
+      experience: "Év tapasztalat",
+      shipped: "Átadott projekt",
+      stars: "GitHub csillag",
+      satisfaction: "Ügyfélelégedettség"
+    },
+    projects: [
+      { title: "Lumina UI", description: "Produkcióra kész komponenskönyvtár Radix UI alapokon, fókuszban az akadálymentesítéssel és a kiváló fejlesztői élménnyel.", tags: ["React", "TypeScript", "Storybook"], gradient: "from-violet-600/30 to-cyan-500/20", accent: "#7c3aed", demo: "#", github: "#" },
+      { title: "Velocify Dashboard", description: "Valós idejű analitikai műszerfal SaaS mérőszámokhoz élő WebSocket frissítésekkel, interaktív diagramokkal és szerepkör alapú hozzáféréssel.", tags: ["Next.js", "Recharts", "WebSocket"], gradient: "from-cyan-600/30 to-emerald-500/20", accent: "#06b6d4", demo: "#", github: "#" },
+      { title: "Forge CMS", description: "Headless CMS vizuális blokkszerkesztővel, többnyelvű támogatással és GraphQL API-val. 12 éles weboldalt szolgál ki.", tags: ["Node.js", "GraphQL", "PostgreSQL"], gradient: "from-fuchsia-600/30 to-violet-500/20", accent: "#d946ef", demo: "#", github: "#" },
+      { title: "PixelPerfect", description: "Böngészőalapú tervezőeszköz gyors UI prototípus-készítéshez, React komponens exportálási lehetőséggel. Canvas API-val építve.", tags: ["Canvas API", "TypeScript", "Zustand"], gradient: "from-amber-600/20 to-orange-500/20", accent: "#f59e0b", demo: "#", github: "#" },
+    ],
+  }
+};
 
+/* ─────────────────────────────────────────────────────────────
+   ANIMATIONS & UTILS
+───────────────────────────────────────────────────────────── */
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 32 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
@@ -218,16 +289,55 @@ function GlowDot({ color = "cyan" }: { color?: ColorType }) {
   return <span className={`inline-block w-1.5 h-1.5 rounded-full ${colors[color]} mr-2 animate-pulse`} />;
 }
 
+/* Flag SVG Microcomponents */
+function FlagHU() {
+  return (
+    <svg className="w-5 h-3.5 rounded-sm overflow-hidden object-cover shadow-sm border border-white/10" viewBox="0 0 6 4">
+      <rect width="6" height="1.33" fill="#ce2939" />
+      <rect width="6" height="1.33" y="1.33" fill="#fff" />
+      <rect width="6" height="1.33" y="2.66" fill="#477050" />
+    </svg>
+  );
+}
+
+function FlagEN() {
+  return (
+    <svg className="w-5 h-3.5 rounded-sm overflow-hidden object-cover shadow-sm border border-white/10" viewBox="0 0 60 30">
+      <clipPath id="s">
+        <path d="M0,0 v30 h60 v-30 z"/>
+      </clipPath>
+      <path d="M0,0 v30 h60 v-30 z" fill="#012169"/>
+      <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" strokeWidth="6"/>
+      <path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" strokeWidth="4" clipPath="url(#s)"/>
+      <path d="M30,0 v30 M0,15 h60" stroke="#fff" strokeWidth="10"/>
+      <path d="M30,0 v30 M0,15 h60" stroke="#C8102E" strokeWidth="6"/>
+    </svg>
+  );
+}
+
 /* ─────────────────────────────────────────────────────────────
    NAVBAR
 ───────────────────────────────────────────────────────────── */
-function Navbar() {
+interface NavbarProps {
+  lang: Lang;
+  setLang: (lang: Lang) => void;
+  content: ContentStructure;
+}
+
+function Navbar({ lang, setLang, content }: NavbarProps) {
   const scrolled = useScrolled();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const scrollTo = (id: string) => {
-    document.getElementById(id.toLowerCase())?.scrollIntoView({ behavior: "smooth" });
+  const scrollTo = (index: number) => {
+    const rawLinks = ["about", "skills", "projects", "contact"];
+    document.getElementById(rawLinks[index])?.scrollIntoView({ behavior: "smooth" });
     setMobileOpen(false);
+  };
+
+  const toggleLang = () => {
+    const nextLang = lang === "en" ? "hu" : "en";
+    setLang(nextLang);
+    localStorage.setItem("portfolio-lang", nextLang);
   };
 
   return (
@@ -254,10 +364,10 @@ function Navbar() {
           </motion.a>
 
           <nav className="hidden md:flex items-center gap-8">
-            {NAV_LINKS.map((link) => (
+            {content.nav.map((link, i) => (
               <button
                 key={link}
-                onClick={() => scrollTo(link)}
+                onClick={() => scrollTo(i)}
                 className="text-sm text-slate-400 hover:text-white transition-colors duration-200 font-medium relative group"
               >
                 {link}
@@ -283,14 +393,30 @@ function Navbar() {
                 <Icon size={17} />
               </motion.a>
             ))}
+            
+            {/* Language Switcher Button right after the Email Icon */}
+            <motion.button
+              onClick={toggleLang}
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.95 }}
+              className="ml-1 p-1.5 flex items-center justify-center focus:outline-none"
+              title={lang === "en" ? "Switch to Hungarian" : "Váltás Angolra"}
+            >
+              {lang === "hu" ? <FlagHU /> : <FlagEN />}
+            </motion.button>
           </div>
 
-          <button
-            className="md:hidden text-slate-400 hover:text-white"
-            onClick={() => setMobileOpen((v) => !v)}
-          >
-            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
+          <div className="flex items-center gap-4 md:hidden">
+            <button onClick={toggleLang} className="p-1.5">
+              {lang === "hu" ? <FlagHU /> : <FlagEN />}
+            </button>
+            <button
+              className="text-slate-400 hover:text-white"
+              onClick={() => setMobileOpen((v) => !v)}
+            >
+              {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          </div>
         </div>
       </motion.header>
 
@@ -303,10 +429,10 @@ function Navbar() {
             transition={{ duration: 0.25 }}
             className="fixed inset-0 z-40 bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-center gap-8 md:hidden"
           >
-            {NAV_LINKS.map((link) => (
+            {content.nav.map((link, i) => (
               <button
                 key={link}
-                onClick={() => scrollTo(link)}
+                onClick={() => scrollTo(i)}
                 className="text-2xl font-bold text-slate-300 hover:text-white transition-colors"
               >
                 {link}
@@ -331,13 +457,13 @@ function Navbar() {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   HERO (COUNTER-ROTATING COMPONENT BADGES)
+   HERO 
 ───────────────────────────────────────────────────────────── */
-function Hero() {
+function Hero({ content }: { content: ContentStructure }) {
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 500], [0, 120]);
   const opacity = useTransform(scrollY, [0, 400], [1, 0]);
-  const typedTitle = useTypewriter(PORTFOLIO_DATA.titles);
+  const typedTitle = useTypewriter(content.titles);
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
@@ -356,17 +482,18 @@ function Hero() {
               <motion.div variants={fadeUp} className="flex items-center gap-2">
                 <GlowDot color="cyan" />
                 <span className="text-xs font-mono text-cyan-400 tracking-widest uppercase">
-                  {PORTFOLIO_DATA.availability}
+                  {content.availability}
                 </span>
               </motion.div>
 
               <motion.h1 variants={fadeUp} className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.05] tracking-tight">
-                <span className="text-white">Hi, I'm </span>
+                <span className="text-white">{content === DICTIONARY.hu ? "Szia, " : "Hi, I'm "}</span>
                 <span className="bg-gradient-to-r from-cyan-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
                   {PORTFOLIO_DATA.name}
                 </span>
+                {content === DICTIONARY.hu && <span className="text-white"> vagyok</span>}
                 <br />
-                <span className="text-slate-300 text-4xl sm:text-5xl lg:text-6xl font-bold inline-block mt-2 min-h-[1.2em]">
+                <span className="text-slate-300 text-3xl sm:text-5xl lg:text-5xl font-bold inline-block mt-2 min-h-[1.2em]">
                   {typedTitle}
                   <motion.span
                     animate={{ opacity: [1, 0] }}
@@ -377,7 +504,7 @@ function Hero() {
               </motion.h1>
 
               <motion.p variants={fadeUp} className="text-slate-400 text-lg max-w-lg leading-relaxed mt-4">
-                {PORTFOLIO_DATA.tagline}
+                {content.tagline}
               </motion.p>
 
               <motion.div variants={fadeUp} className="flex flex-wrap gap-4 pt-2">
@@ -387,7 +514,7 @@ function Hero() {
                   whileTap={{ scale: 0.97 }}
                   className="group relative px-7 py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-cyan-500 to-violet-500 text-white shadow-[0_0_30px_rgba(6,182,212,0.3)] hover:shadow-[0_0_40px_rgba(6,182,212,0.5)] transition-shadow duration-300"
                 >
-                  View My Work
+                  {content.labels.viewWork}
                   <ArrowUpRight size={16} className="inline ml-2 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                 </motion.button>
 
@@ -398,12 +525,13 @@ function Hero() {
                   className="group flex items-center gap-2 px-7 py-3 rounded-xl font-semibold text-sm border border-white/10 text-slate-300 hover:text-white hover:border-white/20 hover:bg-white/5 transition-all duration-300"
                 >
                   <Download size={15} />
-                  Download CV
+                  {content.labels.downloadCv}
                 </motion.a>
               </motion.div>
             </motion.div>
           </div>
 
+          {/* Orbital Atom Core with Non-Rotating Horizontal Text Badges */}
           <motion.div
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -412,7 +540,7 @@ function Hero() {
           >
             <div className="relative w-72 h-72 sm:w-80 sm:h-80 lg:w-[380px] lg:h-[380px] flex items-center justify-center">
               
-              {/* Outer Orbit (React) */}
+              {/* Outer Ring - React */}
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
@@ -430,7 +558,7 @@ function Hero() {
                 </motion.div>
               </motion.div>
 
-              {/* Middle Orbit (TypeScript) */}
+              {/* Middle Ring - TypeScript */}
               <motion.div
                 animate={{ rotate: -360 }}
                 transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
@@ -448,7 +576,7 @@ function Hero() {
                 </motion.div>
               </motion.div>
 
-              {/* Inner Orbit (C#) */}
+              {/* Inner Ring - C# */}
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 9, repeat: Infinity, ease: "linear" }}
@@ -466,7 +594,7 @@ function Hero() {
                 </motion.div>
               </motion.div>
 
-              {/* Central Monogram */}
+              {/* Central Cap */}
               <div className="absolute w-40 h-40 sm:w-44 sm:h-44 rounded-full bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 flex items-center justify-center shadow-[inset_0_0_40px_rgba(0,0,0,0.5)] z-10">
                 <motion.div
                   animate={{ scale: [1, 1.05, 1] }}
@@ -487,7 +615,7 @@ function Hero() {
           transition={{ delay: 1.5 }}
           className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
         >
-          <span className="text-xs text-slate-500 font-mono tracking-widest uppercase">Scroll</span>
+          <span className="text-xs text-slate-500 font-mono tracking-widest uppercase">{content.labels.scroll}</span>
           <motion.div
             animate={{ y: [0, 8, 0] }}
             transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
@@ -503,7 +631,7 @@ function Hero() {
 /* ─────────────────────────────────────────────────────────────
    ABOUT
 ───────────────────────────────────────────────────────────── */
-function About() {
+function About({ content }: { content: ContentStructure }) {
   const ref = useRef<HTMLElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
 
@@ -520,17 +648,17 @@ function About() {
         >
           <div>
             <motion.div variants={fadeUp}>
-              <SectionLabel>About Me</SectionLabel>
+              <SectionLabel>{content.labels.about}</SectionLabel>
               <h2 className="text-4xl sm:text-5xl font-black text-white mb-6 leading-tight">
-                Building things
+                {content.labels.aboutHeading}
                 <br />
-                <span className="text-slate-400">that matter.</span>
+                <span className="text-slate-400">{content.labels.aboutSubheading}</span>
               </h2>
               <p className="text-slate-400 text-base leading-loose mb-8">
-                {PORTFOLIO_DATA.about.bio}
+                {content.about.bio}
               </p>
               <div className="flex flex-wrap gap-3">
-                {PORTFOLIO_DATA.about.highlights.map((h) => (
+                {content.about.highlights.map((h) => (
                   <span
                     key={h}
                     className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm text-slate-300 font-medium"
@@ -544,26 +672,18 @@ function About() {
 
           <motion.div variants={fadeUp} className="grid grid-cols-2 gap-4">
             {[
-              { value: "5+", label: "Years of Experience", Icon: Zap, color: "cyan" as const },
-              { value: "20+", label: "Projects Shipped", Icon: Globe, color: "violet" as const },
-              { value: "12k+", label: "GitHub Stars", Icon: Sparkles, color: "fuchsia" as const },
-              { value: "100%", label: "Client Satisfaction", Icon: Cpu, color: "cyan" as const },
+              { value: "3+", label: content.labels.experience, Icon: Zap, color: "cyan" as const },
+              { value: "15+", label: content.labels.shipped, Icon: Globe, color: "violet" as const },
+              { value: "500+", label: content.labels.stars, Icon: Sparkles, color: "fuchsia" as const },
+              { value: "100%", label: content.labels.satisfaction, Icon: Cpu, color: "cyan" as const },
             ].map(({ value, label, Icon, color }) => {
               const glow = {
                 cyan: "shadow-[0_0_30px_rgba(6,182,212,0.08)] hover:shadow-[0_0_40px_rgba(6,182,212,0.15)] border-cyan-500/20",
                 violet: "shadow-[0_0_30px_rgba(139,92,246,0.08)] hover:shadow-[0_0_40px_rgba(139,92,246,0.15)] border-violet-500/20",
                 fuchsia: "shadow-[0_0_30px_rgba(217,70,239,0.08)] hover:shadow-[0_0_40px_rgba(217,70,239,0.15)] border-fuchsia-500/20",
               };
-              const iconColor = {
-                cyan: "text-cyan-400",
-                violet: "text-violet-400",
-                fuchsia: "text-fuchsia-400",
-              };
-              const valColor = {
-                cyan: "text-cyan-400",
-                violet: "text-violet-400",
-                fuchsia: "text-fuchsia-400",
-              };
+              const iconColor = { cyan: "text-cyan-400", violet: "text-violet-400", fuchsia: "text-fuchsia-400" };
+              const valColor = { cyan: "text-cyan-400", violet: "text-violet-400", fuchsia: "text-fuchsia-400" };
               return (
                 <motion.div
                   key={label}
@@ -586,7 +706,7 @@ function About() {
 /* ─────────────────────────────────────────────────────────────
    SKILLS
 ───────────────────────────────────────────────────────────── */
-function Skills() {
+function Skills({ content }: { content: ContentStructure }) {
   const ref = useRef<HTMLElement>(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
 
@@ -604,9 +724,9 @@ function Skills() {
       <div className="max-w-7xl mx-auto px-6">
         <motion.div variants={stagger} initial="hidden" animate={inView ? "visible" : "hidden"}>
           <motion.div variants={fadeUp} className="text-center mb-16">
-            <SectionLabel>Tech Stack</SectionLabel>
+            <SectionLabel>{content.labels.skills}</SectionLabel>
             <h2 className="text-4xl sm:text-5xl font-black text-white">
-              My <span className="bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">Toolkit</span>
+              {content.labels.skillsHeading}<span className="bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">{content.labels.skillsSubheading}</span>
             </h2>
           </motion.div>
 
@@ -669,7 +789,7 @@ function Skills() {
 /* ─────────────────────────────────────────────────────────────
    PROJECTS
 ───────────────────────────────────────────────────────────── */
-function Projects() {
+function Projects({ content }: { content: ContentStructure }) {
   const ref = useRef<HTMLElement>(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
 
@@ -681,18 +801,18 @@ function Projects() {
         <motion.div variants={stagger} initial="hidden" animate={inView ? "visible" : "hidden"}>
           <motion.div variants={fadeUp} className="flex items-end justify-between mb-16">
             <div>
-              <SectionLabel>Work</SectionLabel>
+              <SectionLabel>{content.labels.work}</SectionLabel>
               <h2 className="text-4xl sm:text-5xl font-black text-white">
-                Featured <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">Projects</span>
+                {content.labels.projectsHeading}<span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">{content.labels.projectsSubheading}</span>
               </h2>
             </div>
             <a href="#" className="hidden sm:flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors font-medium">
-              View all <ArrowUpRight size={15} />
+              {content.labels.projectsViewAll} <ArrowUpRight size={15} />
             </a>
           </motion.div>
 
           <div className="grid md:grid-cols-2 gap-6">
-            {PORTFOLIO_DATA.projects.map((project, i) => (
+            {content.projects.map((project, i) => (
               <motion.div
                 key={project.title}
                 variants={fadeUp}
@@ -769,7 +889,7 @@ function Projects() {
 /* ─────────────────────────────────────────────────────────────
    CONTACT
 ───────────────────────────────────────────────────────────── */
-function Contact() {
+function Contact({ content }: { content: ContentStructure }) {
   const ref = useRef<HTMLElement>(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
 
@@ -782,18 +902,18 @@ function Contact() {
       <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
         <motion.div variants={stagger} initial="hidden" animate={inView ? "visible" : "hidden"}>
           <motion.div variants={fadeUp}>
-            <SectionLabel>Get In Touch</SectionLabel>
+            <SectionLabel>{content.labels.contact}</SectionLabel>
           </motion.div>
 
           <motion.h2 variants={fadeUp} className="text-4xl sm:text-6xl font-black text-white mb-6 leading-tight">
-            Let's work{" "}
+            {content.labels.contactHeading}
             <span className="bg-gradient-to-r from-cyan-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
-              together
+              {content.labels.contactSubheading}
             </span>
           </motion.h2>
 
           <motion.p variants={fadeUp} className="text-slate-400 text-lg mb-10 max-w-xl mx-auto leading-relaxed">
-            I'm currently available for freelance projects, full-time roles, and interesting collaborations. Let's build something great.
+            {content.labels.contactText}
           </motion.p>
 
           <motion.a
@@ -850,17 +970,36 @@ function Contact() {
    ROOT APP
 ───────────────────────────────────────────────────────────── */
 export default function Portfolio() {
+  const [lang, setLang] = useState<Lang>("hu");
+
+  useEffect(() => {
+    // Check local preference first, fallback to browser tracking system
+    const savedLang = localStorage.getItem("portfolio-lang") as Lang | null;
+    if (savedLang === "en" || savedLang === "hu") {
+      setLang(savedLang);
+    } else {
+      const browserLang = navigator.language.toLowerCase();
+      if (browserLang.startsWith("hu")) {
+        setLang("hu");
+      } else {
+        setLang("en");
+      }
+    }
+  }, []);
+
+  const content = DICTIONARY[lang];
+
   return (
     <div className="min-h-screen bg-slate-950 text-white antialiased selection:bg-cyan-500/30 selection:text-white">
       <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.015] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iLjc1IiBzdGl0Y2hUaWxlcz0ic3RpdGNoIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIzMDAiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
 
-      <Navbar />
+      <Navbar lang={lang} setLang={setLang} content={content} />
       <main>
-        <Hero />
-        <About />
-        <Skills />
-        <Projects />
-        <Contact />
+        <Hero content={content} />
+        <About content={content} />
+        <Skills content={content} />
+        <Projects content={content} />
+        <Contact content={content} />
       </main>
     </div>
   );
