@@ -1,7 +1,10 @@
-import { useState, useEffect, useRef } from "react";
-import { motion, useScroll, useTransform, useInView, AnimatePresence, type Variants } from "framer-motion";
+import { useState, useEffect, useRef, useId, useCallback } from "react";
 import {
-  Mail, ExternalLink, Download,
+  motion, useScroll, useSpring, useTransform, useInView, useReducedMotion,
+  AnimatePresence, MotionConfig, type Variants
+} from "framer-motion";
+import {
+  Mail, ExternalLink, Download, MapPin, ArrowUp,
   ChevronDown, Code2, Layers, Terminal, Cpu, Globe,
   ArrowUpRight, Sparkles, Menu, X, Database, Zap
 } from "lucide-react";
@@ -34,7 +37,9 @@ interface Project {
   tags: string[];
   gradient: string;
   accent: string;
+  /** Leave empty to hide the link. */
   demo: string;
+  /** Leave empty to hide the link. */
   github: string;
 }
 
@@ -45,6 +50,11 @@ interface ContentStructure {
   about: AboutData;
   projects: Project[];
   nav: string[];
+  meta: {
+    /** <title> of the document. */
+    title: string;
+    description: string;
+  };
   labels: {
     about: string;
     skills: string;
@@ -67,6 +77,16 @@ interface ContentStructure {
     shipped: string;
     stars: string;
     satisfaction: string;
+    greetingPrefix: string;
+    greetingSuffix: string;
+    switchLang: string;
+    openMenu: string;
+    closeMenu: string;
+    backToTop: string;
+    home: string;
+    mainNav: string;
+    liveDemo: string;
+    sourceCode: string;
   };
 }
 
@@ -75,6 +95,7 @@ interface PortfolioData {
   email: string;
   location: string;
   social: SocialLinks;
+  /** Empty string hides the "Download CV" button. Drop a cv.pdf in /public and set it to "cv.pdf". */
   cvUrl: string;
   skills: Record<"Frontend" | "Backend" | "Tools", Skill[]>;
 }
@@ -88,10 +109,12 @@ const PORTFOLIO_DATA: PortfolioData = {
   location: "Budapest, Hungary",
   social: {
     github: "https://github.com/Lyon0525",
-    linkedin: "https://linkedin.com",
+    // TODO: paste your real profile URL here (e.g. https://www.linkedin.com/in/…).
+    // While it is empty the LinkedIn icon is hidden instead of linking to linkedin.com's homepage.
+    linkedin: "",
     email: "mailto:palfikristof2004.kfpl@gmail.com",
   },
-  cvUrl: "#",
+  cvUrl: "",
   skills: {
     Frontend: [
       { name: "React", level: 95 },
@@ -118,6 +141,18 @@ const PORTFOLIO_DATA: PortfolioData = {
   },
 };
 
+/** Ids of the scrollable sections, in navigation order. Module-level so the reference stays stable. */
+const SECTION_IDS = ["about", "skills", "projects", "contact"] as const;
+
+const SOCIAL_LINKS = [
+  { key: "github", href: PORTFOLIO_DATA.social.github, Icon: FaGithub, label: "GitHub" },
+  { key: "linkedin", href: PORTFOLIO_DATA.social.linkedin, Icon: FaLinkedin, label: "LinkedIn" },
+  { key: "email", href: PORTFOLIO_DATA.social.email, Icon: Mail, label: "Email" },
+].filter((link) => link.href.length > 0);
+
+/** mailto: links must not open a blank tab — it leaves an empty window behind. */
+const isExternal = (href: string) => /^https?:/i.test(href);
+
 /* ─────────────────────────────────────────────────────────────
    LANGUAGE DICTIONARY
 ───────────────────────────────────────────────────────────── */
@@ -136,6 +171,10 @@ const DICTIONARY: Record<Lang, ContentStructure> = {
       highlights: ["Full-Stack & Native Apps", "Big Data Pipelines", "DevOps & Cloud Infrastructure"],
     },
     nav: ["About", "Skills", "Projects", "Contact"],
+    meta: {
+      title: `${PORTFOLIO_DATA.name} — Full-Stack Developer`,
+      description: "Portfolio of Kristóf Pálfi — full-stack web developer building scalable applications, data pipelines and cloud infrastructure.",
+    },
     labels: {
       about: "About Me",
       skills: "Tech Stack",
@@ -157,13 +196,23 @@ const DICTIONARY: Record<Lang, ContentStructure> = {
       experience: "Years of Experience",
       shipped: "Projects Shipped",
       stars: "GitHub Stars",
-      satisfaction: "Client Satisfaction"
+      satisfaction: "Client Satisfaction",
+      greetingPrefix: "Hi, I'm ",
+      greetingSuffix: "",
+      switchLang: "Váltás magyarra",
+      openMenu: "Open menu",
+      closeMenu: "Close menu",
+      backToTop: "Back to top",
+      home: "Back to top",
+      mainNav: "Main navigation",
+      liveDemo: "Live demo",
+      sourceCode: "Source code",
     },
     projects: [
-      { title: "Lumina UI", description: "A production-ready component library built on Radix UI primitives with a focus on accessibility and developer experience.", tags: ["React", "TypeScript", "Storybook"], gradient: "from-violet-600/30 to-cyan-500/20", accent: "#7c3aed", demo: "#", github: "#" },
-      { title: "Velocify Dashboard", description: "Real-time analytics dashboard for SaaS metrics with live WebSocket updates, interactive charts, and role-based access control.", tags: ["Next.js", "Recharts", "WebSocket"], gradient: "from-cyan-600/30 to-emerald-500/20", accent: "#06b6d4", demo: "#", github: "#" },
-      { title: "Forge CMS", description: "A headless CMS with a visual block editor, multi-locale support, and a GraphQL API. Powers 12 production sites.", tags: ["Node.js", "GraphQL", "PostgreSQL"], gradient: "from-fuchsia-600/30 to-violet-500/20", accent: "#d946ef", demo: "#", github: "#" },
-      { title: "PixelPerfect", description: "A browser-based design tool for rapid UI prototyping with export to React components. Built with Canvas API.", tags: ["Canvas API", "TypeScript", "Zustand"], gradient: "from-amber-600/20 to-orange-500/20", accent: "#f59e0b", demo: "#", github: "#" },
+      { title: "Lumina UI", description: "A production-ready component library built on Radix UI primitives with a focus on accessibility and developer experience.", tags: ["React", "TypeScript", "Storybook"], gradient: "from-violet-600/30 to-cyan-500/20", accent: "#7c3aed", demo: "", github: "" },
+      { title: "Velocify Dashboard", description: "Real-time analytics dashboard for SaaS metrics with live WebSocket updates, interactive charts, and role-based access control.", tags: ["Next.js", "Recharts", "WebSocket"], gradient: "from-cyan-600/30 to-emerald-500/20", accent: "#06b6d4", demo: "", github: "" },
+      { title: "Forge CMS", description: "A headless CMS with a visual block editor, multi-locale support, and a GraphQL API. Powers 12 production sites.", tags: ["Node.js", "GraphQL", "PostgreSQL"], gradient: "from-fuchsia-600/30 to-violet-500/20", accent: "#d946ef", demo: "", github: "" },
+      { title: "PixelPerfect", description: "A browser-based design tool for rapid UI prototyping with export to React components. Built with Canvas API.", tags: ["Canvas API", "TypeScript", "Zustand"], gradient: "from-amber-600/20 to-orange-500/20", accent: "#f59e0b", demo: "", github: "" },
     ],
   },
   hu: {
@@ -180,6 +229,10 @@ const DICTIONARY: Record<Lang, ContentStructure> = {
       highlights: ["Full-Stack és Natív Appok", "Big Data Adatfolyamok", "DevOps és Felhő Infrastruktúra"],
     },
     nav: ["Rólam", "Képességek", "Projektek", "Kapcsolat"],
+    meta: {
+      title: `${PORTFOLIO_DATA.name} — Full-Stack Fejlesztő`,
+      description: "Pálfi Kristóf portfóliója — full-stack webfejlesztő, skálázható alkalmazások, adatfolyamok és felhő-infrastruktúra.",
+    },
     labels: {
       about: "Rólam",
       skills: "Technológiák",
@@ -201,13 +254,23 @@ const DICTIONARY: Record<Lang, ContentStructure> = {
       experience: "Év tapasztalat",
       shipped: "Átadott projekt",
       stars: "GitHub csillag",
-      satisfaction: "Ügyfélelégedettség"
+      satisfaction: "Ügyfélelégedettség",
+      greetingPrefix: "Szia, ",
+      greetingSuffix: " vagyok",
+      switchLang: "Switch to English",
+      openMenu: "Menü megnyitása",
+      closeMenu: "Menü bezárása",
+      backToTop: "Vissza a tetejére",
+      home: "Vissza a tetejére",
+      mainNav: "Főmenü",
+      liveDemo: "Élő demó",
+      sourceCode: "Forráskód",
     },
     projects: [
-      { title: "Lumina UI", description: "Produkcióra kész komponenskönyvtár Radix UI alapokon, fókuszban az akadálymentesítéssel és a kiváló fejlesztői élménnyel.", tags: ["React", "TypeScript", "Storybook"], gradient: "from-violet-600/30 to-cyan-500/20", accent: "#7c3aed", demo: "#", github: "#" },
-      { title: "Velocify Dashboard", description: "Valós idejű analitikai műszerfal SaaS mérőszámokhoz élő WebSocket frissítésekkel, interaktív diagramokkal és szerepkör alapú hozzáféréssel.", tags: ["Next.js", "Recharts", "WebSocket"], gradient: "from-cyan-600/30 to-emerald-500/20", accent: "#06b6d4", demo: "#", github: "#" },
-      { title: "Forge CMS", description: "Headless CMS vizuális blokkszerkesztővel, többnyelvű támogatással és GraphQL API-val. 12 éles weboldalt szolgál ki.", tags: ["Node.js", "GraphQL", "PostgreSQL"], gradient: "from-fuchsia-600/30 to-violet-500/20", accent: "#d946ef", demo: "#", github: "#" },
-      { title: "PixelPerfect", description: "Böngészőalapú tervezőeszköz gyors UI prototípus-készítéshez, React komponens exportálási lehetőséggel. Canvas API-val építve.", tags: ["Canvas API", "TypeScript", "Zustand"], gradient: "from-amber-600/20 to-orange-500/20", accent: "#f59e0b", demo: "#", github: "#" },
+      { title: "Lumina UI", description: "Produkcióra kész komponenskönyvtár Radix UI alapokon, fókuszban az akadálymentesítéssel és a kiváló fejlesztői élménnyel.", tags: ["React", "TypeScript", "Storybook"], gradient: "from-violet-600/30 to-cyan-500/20", accent: "#7c3aed", demo: "", github: "" },
+      { title: "Velocify Dashboard", description: "Valós idejű analitikai műszerfal SaaS mérőszámokhoz élő WebSocket frissítésekkel, interaktív diagramokkal és szerepkör alapú hozzáféréssel.", tags: ["Next.js", "Recharts", "WebSocket"], gradient: "from-cyan-600/30 to-emerald-500/20", accent: "#06b6d4", demo: "", github: "" },
+      { title: "Forge CMS", description: "Headless CMS vizuális blokkszerkesztővel, többnyelvű támogatással és GraphQL API-val. 12 éles weboldalt szolgál ki.", tags: ["Node.js", "GraphQL", "PostgreSQL"], gradient: "from-fuchsia-600/30 to-violet-500/20", accent: "#d946ef", demo: "", github: "" },
+      { title: "PixelPerfect", description: "Böngészőalapú tervezőeszköz gyors UI prototípus-készítéshez, React komponens exportálási lehetőséggel. Canvas API-val építve.", tags: ["Canvas API", "TypeScript", "Zustand"], gradient: "from-amber-600/20 to-orange-500/20", accent: "#f59e0b", demo: "", github: "" },
     ],
   }
 };
@@ -226,47 +289,97 @@ const stagger: Variants = {
 };
 
 function useScrolled(threshold: number = 20): boolean {
-  const [scrolled, setScrolled] = useState(false);
+  // Seed from the current position so a reload halfway down the page renders the
+  // scrolled state immediately instead of waiting for the first scroll event.
+  const [scrolled, setScrolled] = useState(() => window.scrollY > threshold);
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > threshold);
+    fn();
     window.addEventListener("scroll", fn, { passive: true });
     return () => window.removeEventListener("scroll", fn);
   }, [threshold]);
   return scrolled;
 }
 
-function useTypewriter(words: string[], typingSpeed: number = 100, deletingSpeed: number = 50, pauseDuration: number = 2000): string {
-  const [text, setText] = useState("");
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [loopNum, setLoopNum] = useState(0);
-  const [typingDelay, setTypingDelay] = useState(typingSpeed);
+/** Highlights the section currently under the top third of the viewport. */
+function useActiveSection(ids: readonly string[]): string | null {
+  const [active, setActive] = useState<string | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const i = loopNum % words.length;
-      const fullText = words[i];
+    const elements = ids
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => el !== null);
+    if (elements.length === 0) return;
 
-      if (isDeleting) {
-        setText(fullText.substring(0, text.length - 1));
-        setTypingDelay(deletingSpeed);
-      } else {
-        setText(fullText.substring(0, text.length + 1));
-        setTypingDelay(typingSpeed);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible.length > 0) setActive(visible[0].target.id);
+      },
+      { rootMargin: "-25% 0px -65% 0px" }
+    );
+
+    elements.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [ids]);
+
+  return active;
+}
+
+function useTypewriter(
+  words: string[],
+  enabled: boolean = true,
+  typingSpeed: number = 100,
+  deletingSpeed: number = 50,
+  pauseDuration: number = 2000
+): string {
+  const [text, setText] = useState("");
+  const [activeWords, setActiveWords] = useState(words);
+
+  // Clear while rendering when the word list changes (language switch), otherwise the
+  // half-typed previous word gets sliced out of the new one and renders garbage.
+  if (activeWords !== words) {
+    setActiveWords(words);
+    setText("");
+  }
+
+  useEffect(() => {
+    if (!enabled || words.length === 0) return;
+
+    // The cursor position lives in the closure, so the loop is driven purely by
+    // timers instead of re-running the effect on every character.
+    let current = "";
+    let index = 0;
+    let deleting = false;
+    let timer: ReturnType<typeof setTimeout>;
+
+    const tick = () => {
+      const fullText = words[index];
+
+      if (!deleting && current === fullText) {
+        deleting = true;
+        timer = setTimeout(tick, pauseDuration);
+        return;
+      }
+      if (deleting && current === "") {
+        deleting = false;
+        index = (index + 1) % words.length;
+        timer = setTimeout(tick, 400);
+        return;
       }
 
-      if (!isDeleting && text === fullText) {
-        setTypingDelay(pauseDuration);
-        setIsDeleting(true);
-      } else if (isDeleting && text === "") {
-        setIsDeleting(false);
-        setLoopNum(loopNum + 1);
-        setTypingDelay(500);
-      }
-    }, typingDelay);
+      current = deleting ? fullText.slice(0, current.length - 1) : fullText.slice(0, current.length + 1);
+      setText(current);
+      timer = setTimeout(tick, deleting ? deletingSpeed : typingSpeed);
+    };
 
+    timer = setTimeout(tick, typingSpeed);
     return () => clearTimeout(timer);
-  }, [text, isDeleting, loopNum, typingDelay, words, typingSpeed, deletingSpeed, pauseDuration]);
+  }, [words, enabled, typingSpeed, deletingSpeed, pauseDuration]);
 
+  if (!enabled) return words[0] ?? "";
   return text;
 }
 
@@ -281,10 +394,10 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 type ColorType = "cyan" | "violet" | "fuchsia";
 function GlowDot({ color = "cyan" }: { color?: ColorType }) {
-  const colors: Record<ColorType, string> = { 
-    cyan: "bg-cyan-400", 
-    violet: "bg-violet-400", 
-    fuchsia: "bg-fuchsia-400" 
+  const colors: Record<ColorType, string> = {
+    cyan: "bg-cyan-400",
+    violet: "bg-violet-400",
+    fuchsia: "bg-fuchsia-400"
   };
   return <span className={`inline-block w-1.5 h-1.5 rounded-full ${colors[color]} mr-2 animate-pulse`} />;
 }
@@ -292,7 +405,7 @@ function GlowDot({ color = "cyan" }: { color?: ColorType }) {
 /* Flag SVG Microcomponents */
 function FlagHU() {
   return (
-    <svg className="w-5 h-3.5 rounded-sm overflow-hidden object-cover shadow-sm border border-white/10" viewBox="0 0 6 4">
+    <svg className="w-5 h-3.5 rounded-sm shadow-sm border border-white/10" viewBox="0 0 6 4" aria-hidden="true" focusable="false">
       <rect width="6" height="1.33" fill="#ce2939" />
       <rect width="6" height="1.33" y="1.33" fill="#fff" />
       <rect width="6" height="1.33" y="2.66" fill="#477050" />
@@ -301,17 +414,52 @@ function FlagHU() {
 }
 
 function FlagEN() {
+  // The flag renders twice (desktop + mobile bar), so the clip path needs a unique id.
+  const clipId = useId();
   return (
-    <svg className="w-5 h-3.5 rounded-sm overflow-hidden object-cover shadow-sm border border-white/10" viewBox="0 0 60 30">
-      <clipPath id="s">
-        <path d="M0,0 v30 h60 v-30 z"/>
+    <svg className="w-5 h-3.5 rounded-sm shadow-sm border border-white/10" viewBox="0 0 60 30" aria-hidden="true" focusable="false">
+      <clipPath id={clipId}>
+        <path d="M0,0 v30 h60 v-30 z" />
       </clipPath>
-      <path d="M0,0 v30 h60 v-30 z" fill="#012169"/>
-      <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" strokeWidth="6"/>
-      <path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" strokeWidth="4" clipPath="url(#s)"/>
-      <path d="M30,0 v30 M0,15 h60" stroke="#fff" strokeWidth="10"/>
-      <path d="M30,0 v30 M0,15 h60" stroke="#C8102E" strokeWidth="6"/>
+      <path d="M0,0 v30 h60 v-30 z" fill="#012169" />
+      <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" strokeWidth="6" />
+      <path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" strokeWidth="4" clipPath={`url(#${clipId})`} />
+      <path d="M30,0 v30 M0,15 h60" stroke="#fff" strokeWidth="10" />
+      <path d="M30,0 v30 M0,15 h60" stroke="#C8102E" strokeWidth="6" />
     </svg>
+  );
+}
+
+/** Shows the language you switch *to*, so the icon and the tooltip agree. */
+function LangToggle({ lang, onToggle, label, className = "" }: {
+  lang: Lang; onToggle: () => void; label: string; className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      title={label}
+      aria-label={label}
+      className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 ${className}`}
+    >
+      {lang === "hu" ? <FlagEN /> : <FlagHU />}
+      <span className="text-[11px] font-mono font-bold tracking-wider">{lang === "hu" ? "EN" : "HU"}</span>
+    </button>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   SCROLL PROGRESS BAR
+───────────────────────────────────────────────────────────── */
+function ScrollProgress() {
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, { stiffness: 140, damping: 30, restDelta: 0.001 });
+  return (
+    <motion.div
+      style={{ scaleX }}
+      aria-hidden="true"
+      className="fixed top-0 left-0 right-0 h-[2px] z-[60] origin-left bg-gradient-to-r from-cyan-400 via-violet-400 to-fuchsia-400"
+    />
   );
 }
 
@@ -320,25 +468,39 @@ function FlagEN() {
 ───────────────────────────────────────────────────────────── */
 interface NavbarProps {
   lang: Lang;
-  setLang: (lang: Lang) => void;
+  onToggleLang: () => void;
   content: ContentStructure;
 }
 
-function Navbar({ lang, setLang, content }: NavbarProps) {
+function Navbar({ lang, onToggleLang, content }: NavbarProps) {
   const scrolled = useScrolled();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const active = useActiveSection(SECTION_IDS);
 
-  const scrollTo = (index: number) => {
-    const rawLinks = ["about", "skills", "projects", "contact"];
-    document.getElementById(rawLinks[index])?.scrollIntoView({ behavior: "smooth" });
+  const scrollTo = useCallback((index: number) => {
+    document.getElementById(SECTION_IDS[index])?.scrollIntoView({ behavior: "smooth" });
     setMobileOpen(false);
-  };
+  }, []);
 
-  const toggleLang = () => {
-    const nextLang = lang === "en" ? "hu" : "en";
-    setLang(nextLang);
-    localStorage.setItem("portfolio-lang", nextLang);
-  };
+  const scrollToTop = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setMobileOpen(false);
+  }, []);
+
+  // Lock the page behind the overlay and allow Escape to dismiss it.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [mobileOpen]);
 
   return (
     <>
@@ -353,68 +515,69 @@ function Navbar({ lang, setLang, content }: NavbarProps) {
         }`}
       >
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <motion.a
-            href="#"
-            className="font-mono text-sm font-bold tracking-tight"
+          <motion.button
+            type="button"
+            onClick={scrollToTop}
+            aria-label={content.labels.home}
+            className="font-mono text-sm font-bold tracking-tight rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
             whileHover={{ scale: 1.05 }}
           >
             <span className="text-cyan-400">&lt;</span>
             <span className="text-white">PORTFOLIO</span>
             <span className="text-cyan-400">/&gt;</span>
-          </motion.a>
+          </motion.button>
 
-          <nav className="hidden md:flex items-center gap-8">
-            {content.nav.map((link, i) => (
-              <button
-                key={link}
-                onClick={() => scrollTo(i)}
-                className="text-sm text-slate-400 hover:text-white transition-colors duration-200 font-medium relative group"
-              >
-                {link}
-                <span className="absolute -bottom-0.5 left-0 w-0 h-px bg-cyan-400 group-hover:w-full transition-all duration-300" />
-              </button>
-            ))}
+          <nav className="hidden md:flex items-center gap-8" aria-label={content.labels.mainNav}>
+            {content.nav.map((link, i) => {
+              const isActive = active === SECTION_IDS[i];
+              return (
+                <button
+                  key={link}
+                  onClick={() => scrollTo(i)}
+                  aria-current={isActive ? "true" : undefined}
+                  className={`text-sm transition-colors duration-200 font-medium relative group rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 ${
+                    isActive ? "text-white" : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  {link}
+                  <span
+                    className={`absolute -bottom-0.5 left-0 h-px bg-cyan-400 transition-all duration-300 ${
+                      isActive ? "w-full" : "w-0 group-hover:w-full"
+                    }`}
+                  />
+                </button>
+              );
+            })}
           </nav>
 
           <div className="hidden md:flex items-center gap-3">
-            {[
-              { href: PORTFOLIO_DATA.social.github, Icon: FaGithub },
-              { href: PORTFOLIO_DATA.social.linkedin, Icon: FaLinkedin },
-              { href: PORTFOLIO_DATA.social.email, Icon: Mail },
-            ].map(({ href, Icon }) => (
+            {SOCIAL_LINKS.map(({ key, href, Icon, label }) => (
               <motion.a
-                key={href}
+                key={key}
                 href={href}
-                whileHover={{ scale: 1.15, color: "#22d3ee" }}
-                className="text-slate-400 hover:text-cyan-400 transition-colors p-1.5"
-                target="_blank"
-                rel="noreferrer"
+                aria-label={label}
+                title={label}
+                whileHover={{ scale: 1.15 }}
+                className="text-slate-400 hover:text-cyan-400 transition-colors p-1.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+                {...(isExternal(href) ? { target: "_blank", rel: "noreferrer noopener" } : {})}
               >
-                <Icon size={17} />
+                <Icon size={17} aria-hidden="true" />
               </motion.a>
             ))}
-            
-            {/* Language Switcher Button right after the Email Icon */}
-            <motion.button
-              onClick={toggleLang}
-              whileHover={{ scale: 1.15 }}
-              whileTap={{ scale: 0.95 }}
-              className="ml-1 p-1.5 flex items-center justify-center focus:outline-none"
-              title={lang === "en" ? "Switch to Hungarian" : "Váltás Angolra"}
-            >
-              {lang === "hu" ? <FlagHU /> : <FlagEN />}
-            </motion.button>
+
+            <LangToggle lang={lang} onToggle={onToggleLang} label={content.labels.switchLang} className="ml-1" />
           </div>
 
-          <div className="flex items-center gap-4 md:hidden">
-            <button onClick={toggleLang} className="p-1.5">
-              {lang === "hu" ? <FlagHU /> : <FlagEN />}
-            </button>
+          <div className="flex items-center gap-2 md:hidden">
+            <LangToggle lang={lang} onToggle={onToggleLang} label={content.labels.switchLang} />
             <button
-              className="text-slate-400 hover:text-white"
+              className="text-slate-400 hover:text-white p-1.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
               onClick={() => setMobileOpen((v) => !v)}
+              aria-label={mobileOpen ? content.labels.closeMenu : content.labels.openMenu}
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-menu"
             >
-              {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+              {mobileOpen ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}
             </button>
           </div>
         </div>
@@ -423,6 +586,7 @@ function Navbar({ lang, setLang, content }: NavbarProps) {
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
+            id="mobile-menu"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
@@ -433,19 +597,23 @@ function Navbar({ lang, setLang, content }: NavbarProps) {
               <button
                 key={link}
                 onClick={() => scrollTo(i)}
-                className="text-2xl font-bold text-slate-300 hover:text-white transition-colors"
+                className={`text-2xl font-bold transition-colors ${
+                  active === SECTION_IDS[i] ? "text-cyan-400" : "text-slate-300 hover:text-white"
+                }`}
               >
                 {link}
               </button>
             ))}
             <div className="flex gap-6 mt-4">
-              {[
-                { href: PORTFOLIO_DATA.social.github, Icon: FaGithub },
-                { href: PORTFOLIO_DATA.social.linkedin, Icon: FaLinkedin },
-                { href: PORTFOLIO_DATA.social.email, Icon: Mail },
-              ].map(({ href, Icon }) => (
-                <a key={href} href={href} className="text-slate-400 hover:text-cyan-400 transition-colors">
-                  <Icon size={22} />
+              {SOCIAL_LINKS.map(({ key, href, Icon, label }) => (
+                <a
+                  key={key}
+                  href={href}
+                  aria-label={label}
+                  className="text-slate-400 hover:text-cyan-400 transition-colors"
+                  {...(isExternal(href) ? { target: "_blank", rel: "noreferrer noopener" } : {})}
+                >
+                  <Icon size={22} aria-hidden="true" />
                 </a>
               ))}
             </div>
@@ -457,13 +625,20 @@ function Navbar({ lang, setLang, content }: NavbarProps) {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   HERO 
+   HERO
 ───────────────────────────────────────────────────────────── */
 function Hero({ content }: { content: ContentStructure }) {
   const { scrollY } = useScroll();
-  const y = useTransform(scrollY, [0, 500], [0, 120]);
+  const reduceMotion = useReducedMotion();
+  const y = useTransform(scrollY, [0, 500], [0, reduceMotion ? 0 : 120]);
   const opacity = useTransform(scrollY, [0, 400], [1, 0]);
-  const typedTitle = useTypewriter(content.titles);
+  // Once faded out the hero must stop swallowing clicks meant for the section below.
+  const pointerEvents = useTransform(opacity, (v) => (v < 0.05 ? "none" : "auto"));
+  const typedTitle = useTypewriter(content.titles, !reduceMotion);
+
+  // Reserve the height of the longest title so the tagline and buttons don't jump
+  // every time the typed line wraps.
+  const longestTitle = content.titles.reduce((a, b) => (b.length > a.length ? b : a), "");
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
@@ -475,7 +650,7 @@ function Hero({ content }: { content: ContentStructure }) {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-fuchsia-600/5 blur-[150px]" />
       </motion.div>
 
-      <motion.div style={{ opacity }} className="relative z-10 max-w-7xl mx-auto px-6 w-full">
+      <motion.div style={{ opacity, pointerEvents }} className="relative z-10 max-w-7xl mx-auto px-6 w-full">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           <div>
             <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6">
@@ -487,19 +662,27 @@ function Hero({ content }: { content: ContentStructure }) {
               </motion.div>
 
               <motion.h1 variants={fadeUp} className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.05] tracking-tight">
-                <span className="text-white">{content === DICTIONARY.hu ? "Szia, " : "Hi, I'm "}</span>
-                <span className="bg-gradient-to-r from-cyan-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
-                  {PORTFOLIO_DATA.name}
+                <span className="block">
+                  <span className="text-white">{content.labels.greetingPrefix}</span>
+                  <span className="bg-gradient-to-r from-cyan-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+                    {PORTFOLIO_DATA.name}
+                  </span>
+                  {content.labels.greetingSuffix && (
+                    <span className="text-white">{content.labels.greetingSuffix}</span>
+                  )}
                 </span>
-                {content === DICTIONARY.hu && <span className="text-white"> vagyok</span>}
-                <br />
-                <span className="text-slate-300 text-3xl sm:text-5xl lg:text-5xl font-bold inline-block mt-2 min-h-[1.2em]">
-                  {typedTitle}
-                  <motion.span
-                    animate={{ opacity: [1, 0] }}
-                    transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
-                    className="inline-block w-[4px] h-[0.9em] bg-cyan-400 ml-2 align-baseline translate-y-1"
-                  />
+
+                <span className="relative block text-slate-300 text-3xl sm:text-5xl lg:text-5xl font-bold mt-2">
+                  <span aria-hidden="true" className="invisible select-none">{longestTitle}</span>
+                  <span className="sr-only">{content.titles[0]}</span>
+                  <span aria-hidden="true" className="absolute inset-0">
+                    {typedTitle}
+                    <motion.span
+                      animate={{ opacity: [1, 0] }}
+                      transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                      className="inline-block w-[4px] h-[0.9em] bg-cyan-400 ml-2 align-baseline translate-y-1"
+                    />
+                  </span>
                 </span>
               </motion.h1>
 
@@ -512,21 +695,24 @@ function Hero({ content }: { content: ContentStructure }) {
                   onClick={() => document.getElementById("projects")?.scrollIntoView({ behavior: "smooth" })}
                   whileHover={{ scale: 1.04 }}
                   whileTap={{ scale: 0.97 }}
-                  className="group relative px-7 py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-cyan-500 to-violet-500 text-white shadow-[0_0_30px_rgba(6,182,212,0.3)] hover:shadow-[0_0_40px_rgba(6,182,212,0.5)] transition-shadow duration-300"
+                  className="group relative px-7 py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-cyan-500 to-violet-500 text-white shadow-[0_0_30px_rgba(6,182,212,0.3)] hover:shadow-[0_0_40px_rgba(6,182,212,0.5)] transition-shadow duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                 >
                   {content.labels.viewWork}
-                  <ArrowUpRight size={16} className="inline ml-2 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                  <ArrowUpRight size={16} className="inline ml-2 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" aria-hidden="true" />
                 </motion.button>
 
-                <motion.a
-                  href={PORTFOLIO_DATA.cvUrl}
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="group flex items-center gap-2 px-7 py-3 rounded-xl font-semibold text-sm border border-white/10 text-slate-300 hover:text-white hover:border-white/20 hover:bg-white/5 transition-all duration-300"
-                >
-                  <Download size={15} />
-                  {content.labels.downloadCv}
-                </motion.a>
+                {PORTFOLIO_DATA.cvUrl && (
+                  <motion.a
+                    href={PORTFOLIO_DATA.cvUrl}
+                    download
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="group flex items-center gap-2 px-7 py-3 rounded-xl font-semibold text-sm border border-white/10 text-slate-300 hover:text-white hover:border-white/20 hover:bg-white/5 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+                  >
+                    <Download size={15} aria-hidden="true" />
+                    {content.labels.downloadCv}
+                  </motion.a>
+                )}
               </motion.div>
             </motion.div>
           </div>
@@ -537,9 +723,10 @@ function Hero({ content }: { content: ContentStructure }) {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="relative flex items-center justify-center h-[380px] sm:h-[420px]"
+            aria-hidden="true"
           >
             <div className="relative w-72 h-72 sm:w-80 sm:h-80 lg:w-[380px] lg:h-[380px] flex items-center justify-center">
-              
+
               {/* Outer Ring - React */}
               <motion.div
                 animate={{ rotate: 360 }}
@@ -547,7 +734,7 @@ function Hero({ content }: { content: ContentStructure }) {
                 className="absolute inset-0 rounded-full border border-cyan-500/20"
               >
                 <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_10px_#22d3ee]" />
-                <motion.div 
+                <motion.div
                   animate={{ rotate: -360 }}
                   transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                   style={{ top: "0%", left: "50%", transform: "translate(15px, -50%)" }}
@@ -565,7 +752,7 @@ function Hero({ content }: { content: ContentStructure }) {
                 className="absolute inset-8 rounded-full border border-violet-500/25"
               >
                 <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-violet-400 shadow-[0_0_10px_#a78bfa]" />
-                <motion.div 
+                <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
                   style={{ top: "50%", right: "0%", transform: "translate(calc(100% + 8px), -50%)" }}
@@ -583,7 +770,7 @@ function Hero({ content }: { content: ContentStructure }) {
                 className="absolute inset-16 rounded-full border border-fuchsia-500/30"
               >
                 <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-fuchsia-400 shadow-[0_0_8px_#e879f9]" />
-                <motion.div 
+                <motion.div
                   animate={{ rotate: -360 }}
                   transition={{ duration: 9, repeat: Infinity, ease: "linear" }}
                   style={{ bottom: "0%", left: "50%", transform: "translate(12px, 50%)" }}
@@ -613,6 +800,7 @@ function Hero({ content }: { content: ContentStructure }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.5 }}
+          aria-hidden="true"
           className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
         >
           <span className="text-xs text-slate-500 font-mono tracking-widest uppercase">{content.labels.scroll}</span>
@@ -636,7 +824,7 @@ function About({ content }: { content: ContentStructure }) {
   const inView = useInView(ref, { once: true, margin: "-80px" });
 
   return (
-    <section id="about" ref={ref} className="py-28 relative overflow-hidden">
+    <section id="about" ref={ref} className="py-28 relative overflow-hidden scroll-mt-20">
       <div className="absolute right-0 top-1/2 -translate-y-1/2 w-96 h-96 bg-violet-600/5 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-6">
@@ -690,7 +878,7 @@ function About({ content }: { content: ContentStructure }) {
                   whileHover={{ y: -4 }}
                   className={`relative p-6 rounded-2xl bg-white/[0.03] backdrop-blur-sm border transition-all duration-300 ${glow[color]}`}
                 >
-                  <Icon size={20} className={`mb-3 ${iconColor[color]}`} />
+                  <Icon size={20} className={`mb-3 ${iconColor[color]}`} aria-hidden="true" />
                   <div className={`text-3xl font-black mb-1 ${valColor[color]}`}>{value}</div>
                   <div className="text-xs text-slate-500 font-medium">{label}</div>
                 </motion.div>
@@ -718,7 +906,7 @@ function Skills({ content }: { content: ContentStructure }) {
   };
 
   return (
-    <section id="skills" ref={ref} className="py-28 relative">
+    <section id="skills" ref={ref} className="py-28 relative scroll-mt-20">
       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-600/5 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-6">
@@ -747,7 +935,7 @@ function Skills({ content }: { content: ContentStructure }) {
                 >
                   <div className="flex items-center gap-3 mb-6">
                     <div className={`p-2 rounded-lg bg-white/5 ${textColor[color]}`}>
-                      <Icon size={18} />
+                      <Icon size={18} aria-hidden="true" />
                     </div>
                     <h3 className="font-bold text-white">{category}</h3>
                   </div>
@@ -764,7 +952,14 @@ function Skills({ content }: { content: ContentStructure }) {
                           <span className="text-sm text-slate-300 font-medium">{name}</span>
                           <span className={`text-xs font-mono ${textColor[color]}`}>{level}%</span>
                         </div>
-                        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div
+                          className="h-1.5 bg-white/5 rounded-full overflow-hidden"
+                          role="progressbar"
+                          aria-label={name}
+                          aria-valuenow={level}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                        >
                           <motion.div
                             initial={{ width: 0 }}
                             animate={inView ? { width: `${level}%` } : {}}
@@ -794,7 +989,7 @@ function Projects({ content }: { content: ContentStructure }) {
   const inView = useInView(ref, { once: true, margin: "-60px" });
 
   return (
-    <section id="projects" ref={ref} className="py-28 relative">
+    <section id="projects" ref={ref} className="py-28 relative scroll-mt-20">
       <div className="absolute right-0 top-0 w-96 h-96 bg-fuchsia-600/5 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-6">
@@ -806,79 +1001,94 @@ function Projects({ content }: { content: ContentStructure }) {
                 {content.labels.projectsHeading}<span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">{content.labels.projectsSubheading}</span>
               </h2>
             </div>
-            <a href="#" className="hidden sm:flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors font-medium">
-              {content.labels.projectsViewAll} <ArrowUpRight size={15} />
-            </a>
+            {PORTFOLIO_DATA.social.github && (
+              <a
+                href={PORTFOLIO_DATA.social.github}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="hidden sm:flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors font-medium rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+              >
+                {content.labels.projectsViewAll} <ArrowUpRight size={15} aria-hidden="true" />
+              </a>
+            )}
           </motion.div>
 
           <div className="grid md:grid-cols-2 gap-6">
-            {content.projects.map((project, i) => (
-              <motion.div
-                key={project.title}
-                variants={fadeUp}
-                whileHover={{ y: -8 }}
-                className="group relative rounded-2xl overflow-hidden bg-white/[0.03] border border-white/[0.07] backdrop-blur-sm transition-all duration-300 hover:border-white/15"
-                style={{ transitionDelay: `${i * 40}ms` }}
-              >
-                <div className={`relative h-48 bg-gradient-to-br ${project.gradient} border-b border-white/5 overflow-hidden`}>
-                  <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:30px_30px]" />
-                  <div className="absolute top-4 left-4 right-4 h-7 rounded-lg bg-black/30 backdrop-blur-sm border border-white/10 flex items-center gap-2 px-3">
-                    <div className="flex gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-red-400/60" />
-                      <div className="w-2 h-2 rounded-full bg-yellow-400/60" />
-                      <div className="w-2 h-2 rounded-full bg-green-400/60" />
+            {content.projects.map((project) => {
+              const links = [
+                { href: project.demo, Icon: ExternalLink, label: content.labels.liveDemo },
+                { href: project.github, Icon: FaGithub, label: content.labels.sourceCode },
+              ].filter((link) => link.href.length > 0);
+
+              return (
+                <motion.div
+                  key={project.title}
+                  variants={fadeUp}
+                  whileHover={{ y: -8 }}
+                  className="group relative rounded-2xl overflow-hidden bg-white/[0.03] border border-white/[0.07] backdrop-blur-sm transition-colors duration-300 hover:border-white/15"
+                >
+                  <div className={`relative h-48 bg-gradient-to-br ${project.gradient} border-b border-white/5 overflow-hidden`}>
+                    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:30px_30px]" />
+                    <div className="absolute top-4 left-4 right-4 h-7 rounded-lg bg-black/30 backdrop-blur-sm border border-white/10 flex items-center gap-2 px-3">
+                      <div className="flex gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-red-400/60" />
+                        <div className="w-2 h-2 rounded-full bg-yellow-400/60" />
+                        <div className="w-2 h-2 rounded-full bg-green-400/60" />
+                      </div>
+                      <div className="flex-1 h-3 rounded bg-white/10 mx-4" />
                     </div>
-                    <div className="flex-1 h-3 rounded bg-white/10 mx-4" />
+                    <div className="absolute bottom-4 left-4 right-4 font-mono text-[10px] text-white/20 leading-relaxed select-none" aria-hidden="true">
+                      <div>const App = () =&gt; &#123;</div>
+                      <div>&nbsp;&nbsp;return &lt;Dashboard /&gt;</div>
+                      <div>&#125;</div>
+                    </div>
+                    <div
+                      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                      style={{ background: `radial-gradient(circle at 50% 50%, ${project.accent}20, transparent 70%)` }}
+                    />
                   </div>
-                  <div className="absolute bottom-4 left-4 right-4 font-mono text-[10px] text-white/20 leading-relaxed select-none">
-                    <div>const App = () =&gt; &#123;</div>
-                    <div>&nbsp;&nbsp;return &lt;Dashboard /&gt;</div>
-                    <div>&#125;</div>
-                  </div>
-                  <div
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                    style={{ background: `radial-gradient(circle at 50% 50%, ${project.accent}20, transparent 70%)` }}
-                  />
-                </div>
 
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-lg font-bold text-white">{project.title}</h3>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <motion.a
-                        href={project.demo}
-                        whileHover={{ scale: 1.15 }}
-                        className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
-                        title="Live Demo"
-                      >
-                        <ExternalLink size={14} />
-                      </motion.a>
-                      <motion.a
-                        href={project.github}
-                        whileHover={{ scale: 1.15 }}
-                        className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
-                        title="GitHub"
-                      >
-                        <FaGithub size={14} />
-                      </motion.a>
+                  <div className="p-6">
+                    <div className="flex items-start justify-between gap-4 mb-3">
+                      <h3 className="text-lg font-bold text-white">{project.title}</h3>
+                      {links.length > 0 && (
+                        // focus-within keeps the links reachable by keyboard — otherwise they
+                        // stay invisible while focused.
+                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-300">
+                          {links.map(({ href, Icon, label }) => (
+                            <motion.a
+                              key={label}
+                              href={href}
+                              target="_blank"
+                              rel="noreferrer noopener"
+                              whileHover={{ scale: 1.15 }}
+                              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+                              title={`${project.title} — ${label}`}
+                              aria-label={`${project.title} — ${label}`}
+                            >
+                              <Icon size={14} aria-hidden="true" />
+                            </motion.a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <p className="text-slate-400 text-sm leading-relaxed mb-4">{project.description}</p>
+
+                    <div className="flex flex-wrap gap-2">
+                      {project.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-2.5 py-1 rounded-full text-xs font-mono border border-white/10 text-slate-400 bg-white/[0.03]"
+                        >
+                          {tag}
+                        </span>
+                      ))}
                     </div>
                   </div>
-
-                  <p className="text-slate-400 text-sm leading-relaxed mb-4">{project.description}</p>
-
-                  <div className="flex flex-wrap gap-2">
-                    {project.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-2.5 py-1 rounded-full text-xs font-mono border border-white/10 text-slate-400 bg-white/[0.03]"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </div>
         </motion.div>
       </div>
@@ -894,7 +1104,7 @@ function Contact({ content }: { content: ContentStructure }) {
   const inView = useInView(ref, { once: true, margin: "-60px" });
 
   return (
-    <section id="contact" ref={ref} className="py-28 relative overflow-hidden">
+    <section id="contact" ref={ref} className="py-28 relative overflow-hidden scroll-mt-20">
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="w-[600px] h-[400px] bg-gradient-to-r from-violet-600/10 via-cyan-600/10 to-fuchsia-600/10 blur-[120px] rounded-full" />
       </div>
@@ -921,86 +1131,139 @@ function Contact({ content }: { content: ContentStructure }) {
             href={PORTFOLIO_DATA.social.email}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.97 }}
-            className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl font-semibold text-base bg-gradient-to-r from-cyan-500 to-violet-500 text-white shadow-[0_0_40px_rgba(6,182,212,0.3)] hover:shadow-[0_0_60px_rgba(6,182,212,0.5)] transition-shadow duration-300 mb-12"
+            className="inline-flex items-center gap-3 px-5 sm:px-8 py-4 rounded-2xl font-semibold text-sm sm:text-base bg-gradient-to-r from-cyan-500 to-violet-500 text-white shadow-[0_0_40px_rgba(6,182,212,0.3)] hover:shadow-[0_0_60px_rgba(6,182,212,0.5)] transition-shadow duration-300 mb-6 max-w-full break-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
           >
-            <Mail size={18} />
+            <Mail size={18} className="shrink-0" aria-hidden="true" />
             {PORTFOLIO_DATA.email}
-            <ArrowUpRight size={16} />
+            <ArrowUpRight size={16} className="shrink-0" aria-hidden="true" />
           </motion.a>
 
+          <motion.p variants={fadeUp} className="flex items-center justify-center gap-2 text-sm text-slate-500 mb-12">
+            <MapPin size={14} aria-hidden="true" />
+            {PORTFOLIO_DATA.location}
+          </motion.p>
+
           <motion.div variants={fadeUp} className="flex justify-center gap-4">
-            {[
-              { href: PORTFOLIO_DATA.social.github, Icon: FaGithub, label: "GitHub" },
-              { href: PORTFOLIO_DATA.social.linkedin, Icon: FaLinkedin, label: "LinkedIn" },
-              { href: PORTFOLIO_DATA.social.email, Icon: Mail, label: "Email" },
-            ].map(({ href, Icon, label }) => (
+            {SOCIAL_LINKS.map(({ key, href, Icon, label }) => (
               <motion.a
-                key={label}
+                key={key}
                 href={href}
-                target="_blank"
-                rel="noreferrer"
+                aria-label={label}
                 whileHover={{ y: -4, scale: 1.05 }}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white/[0.03] border border-white/[0.07] text-slate-400 hover:text-white hover:border-white/15 transition-all duration-300 min-w-[80px]"
+                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white/[0.03] border border-white/[0.07] text-slate-400 hover:text-white hover:border-white/15 transition-all duration-300 min-w-[80px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+                {...(isExternal(href) ? { target: "_blank", rel: "noreferrer noopener" } : {})}
               >
-                <Icon size={20} />
+                <Icon size={20} aria-hidden="true" />
                 <span className="text-xs font-medium">{label}</span>
               </motion.a>
             ))}
           </motion.div>
         </motion.div>
       </div>
-
-      <div className="mt-24 border-t border-white/5 pt-8">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 pb-8">
-          <span className="font-mono text-sm text-slate-600">
-            <span className="text-cyan-600">&lt;</span>
-            {PORTFOLIO_DATA.name}
-            <span className="text-cyan-600">/&gt;</span>
-          </span>
-          <span className="text-xs text-slate-600">
-            © {new Date().getFullYear()} · Designed & built with React + Tailwind + TypeScript
-          </span>
-        </div>
-      </div>
     </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   FOOTER
+───────────────────────────────────────────────────────────── */
+function Footer() {
+  return (
+    <footer className="border-t border-white/5 pt-8">
+      <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 pb-8">
+        <span className="font-mono text-sm text-slate-600">
+          <span className="text-cyan-600">&lt;</span>
+          {PORTFOLIO_DATA.name}
+          <span className="text-cyan-600">/&gt;</span>
+        </span>
+        <span className="text-xs text-slate-600">
+          © {new Date().getFullYear()} · Designed &amp; built with React + Tailwind + TypeScript
+        </span>
+      </div>
+    </footer>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   BACK TO TOP
+───────────────────────────────────────────────────────────── */
+function BackToTop({ label }: { label: string }) {
+  const visible = useScrolled(700);
+
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.button
+          type="button"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          transition={{ duration: 0.2 }}
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          aria-label={label}
+          title={label}
+          className="fixed bottom-6 right-6 z-40 p-3 rounded-full bg-slate-900/80 backdrop-blur-md border border-white/10 text-slate-300 shadow-lg hover:text-cyan-400 hover:border-cyan-500/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+        >
+          <ArrowUp size={18} aria-hidden="true" />
+        </motion.button>
+      )}
+    </AnimatePresence>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────
    ROOT APP
 ───────────────────────────────────────────────────────────── */
+const LANG_STORAGE_KEY = "portfolio-lang";
+
+/** Resolved before the first paint so English visitors never see a Hungarian flash. */
+function getInitialLang(): Lang {
+  try {
+    const saved = localStorage.getItem(LANG_STORAGE_KEY);
+    if (saved === "en" || saved === "hu") return saved;
+  } catch {
+    // localStorage can throw in private mode / blocked-cookie setups.
+  }
+  return navigator.language?.toLowerCase().startsWith("hu") ? "hu" : "en";
+}
+
 export default function Portfolio() {
-  const [lang, setLang] = useState<Lang>("hu");
-
-  useEffect(() => {
-    // Check local preference first, fallback to browser tracking system
-    const savedLang = localStorage.getItem("portfolio-lang") as Lang | null;
-    if (savedLang === "en" || savedLang === "hu") {
-      setLang(savedLang);
-    } else {
-      const browserLang = navigator.language.toLowerCase();
-      if (browserLang.startsWith("hu")) {
-        setLang("hu");
-      } else {
-        setLang("en");
-      }
-    }
-  }, []);
-
+  const [lang, setLang] = useState<Lang>(getInitialLang);
   const content = DICTIONARY[lang];
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-white antialiased selection:bg-cyan-500/30 selection:text-white">
-      <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.015] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iLjc1IiBzdGl0Y2hUaWxlcz0ic3RpdGNoIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIzMDAiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
+  // Keep the document in sync with the chosen language (a11y, SEO, share previews).
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.title = content.meta.title;
+    document
+      .querySelector('meta[name="description"]')
+      ?.setAttribute("content", content.meta.description);
+    try {
+      localStorage.setItem(LANG_STORAGE_KEY, lang);
+    } catch {
+      // Persisting the preference is best-effort.
+    }
+  }, [lang, content]);
 
-      <Navbar lang={lang} setLang={setLang} content={content} />
-      <main>
-        <Hero content={content} />
-        <About content={content} />
-        <Skills content={content} />
-        <Projects content={content} />
-        <Contact content={content} />
-      </main>
-    </div>
+  const toggleLang = useCallback(() => setLang((l) => (l === "en" ? "hu" : "en")), []);
+
+  return (
+    <MotionConfig reducedMotion="user">
+      <div className="min-h-screen bg-slate-950 text-white antialiased selection:bg-cyan-500/30 selection:text-white">
+        <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.015] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iLjc1IiBzdGl0Y2hUaWxlcz0ic3RpdGNoIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIzMDAiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
+
+        <ScrollProgress />
+        <Navbar lang={lang} onToggleLang={toggleLang} content={content} />
+        <main>
+          <Hero content={content} />
+          <About content={content} />
+          <Skills content={content} />
+          <Projects content={content} />
+          <Contact content={content} />
+        </main>
+        <Footer />
+        <BackToTop label={content.labels.backToTop} />
+      </div>
+    </MotionConfig>
   );
 }
